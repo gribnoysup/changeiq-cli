@@ -1,8 +1,8 @@
 ### > changeiq
 
-Command line tool for automatic change of q. c. state of multiple interviews in specific survey
+A command line tool for an automatic change of the q. c. state of multiple interviews in a specific survey.
 
-Nfield domain, username and password arguments are required, as the survey id and a path to tsv file with two colums: INTNR and State Code
+Nfield domain, username and password arguments are required, as well as the survey id and the path to tsv file with two columns: INTNR and State Code.
 
 Default state codes are as follows:
 
@@ -13,12 +13,12 @@ Default state codes are as follows:
 | 2    | Unverified  |
 | 3    | Rejected    |
 
-Custom codes could be provided for statuses with following flags:
+Custom states codes can be provided with the following arguments:
 
-    -C, --not-checked <code>          custom code for status 'not checked'
-    -a, --approved <code>             custom code for status 'approved'
-    -U, --unverified <code>           custom code for status 'unverified'
-    -r, --rejected <code>             custom code for status 'rejected'
+    -C, --not-checked <code>          custom code for the 'not checked' state
+    -a, --approved <code>             custom code for the 'approved' state
+    -U, --unverified <code>           custom code for the 'unverified' state
+    -r, --rejected <code>             custom code for the 'rejected' state
 
 ##### Install with npm:
 
@@ -37,28 +37,28 @@ Custom codes could be provided for statuses with following flags:
     -p, --nfield-password <password>  nfield password
     -f, --path-to-file <path>         path to tsv file with two colums: INTNR and new state code
     -s, --survey-id <survey id>       nfield Survey ID
-    -C, --not-checked <code>          custom code for status 'not checked'
-    -a, --approved <code>             custom code for status 'approved'
-    -U, --unverified <code>           custom code for status 'unverified'
-    -r, --rejected <code>             custom code for status 'rejected'
+    -C, --not-checked <code>          custom code for the 'not checked' state
+    -a, --approved <code>             custom code for the 'approved' state
+    -U, --unverified <code>           custom code for the 'unverified' state
+    -r, --rejected <code>             custom code for the 'rejected' state
     -P, --proxy <proxy string>        proxy string
 
 ##### Example:
 
-First we need to make a valid file with interviews list to pass to CLI. Let's name it `interviews.txt` and fill with some data:
+First we need to create a valid file with an interviews list to pass to the CLI. Let's name it `interviews.txt` and fill it with some data:
 
     65	3
     86	3
     98	1
     123	1
     
-First column is INTNR, second is the new state code (default codes are used for this example), columns are tab separated, empty or NaN cells are ignored by CLI
+The first column is the INTNR; the second is the new state code (default codes are used for this example); columns are tab separated; empty or NaN cells are ignored by the CLI.
 
-Then run command `changeiq` replacing `-d`, `-u,`, `-p`, `-f`, `-s` with valid data
+Then we run the `changeiq` command replacing `-d`, `-u,`, `-p`, `-f`, `-s` with valid data:
 
     changeiq -d DMN -u Username -p p455w0rD -f interviews.txt -s real-survey-id
     
-If all goes well, you shuld see something like this in your terminal:
+If all goes well, something like this will appear in your terminal:
 
     
       starting to process 4 interviews...
@@ -70,15 +70,15 @@ If all goes well, you shuld see something like this in your terminal:
     
       finished in 0.9s
     
-If interviews list is generated with some fieldwork software and state codes differs from those that are used in Nfield, you can provide your custom codes in arguments and not change them in file.
+If the interviews list is generated with some fieldwork software and state codes differ from those that are used in Nfield, you can provide your custom codes in arguments without changing them in the file.
 
-For example if our `interviews.txt` looked something like this from the start
+For example, if our `interviews.txt` looked something like this from the start:
 
     65	19
     86	19
     98	18
     123	18
     
-where 19 is rejected and 18 is approved, we could run changeiq with following additional `-a` and `-r` arguments 
+where 19 is rejected and 18 is approved, we could run `changeiq` with the following additional `-a` and `-r` arguments:
 
     changeiq -d DMN -u Username -p p455w0rD -f interviews.txt -s real-survey-id -a 18 -r 19
