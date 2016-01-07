@@ -62,10 +62,10 @@ program
   .option('-p, --nfield-password <password>', 'nfield password')
   .option('-f, --path-to-file <path>', 'path to tsv file with two colums: INTNR and new state code')
   .option('-s, --survey-id <survey id>', 'nfield Survey ID')
-  .option('-C, --not-checked <code>', 'custom code for status \'not checked\'', parseOptionAsInt, 0)
-  .option('-a, --approved <code>', 'custom code for status \'approved\'', parseOptionAsInt, 1)
-  .option('-U, --unverified <code>', 'custom code for status \'unverified\'', parseOptionAsInt, 2)
-  .option('-r, --rejected <code>', 'custom code for status \'rejected\'', parseOptionAsInt, 3)
+  .option('-C, --not-checked <code>', 'custom code for the \'not checked\' state', parseOptionAsInt, 0)
+  .option('-a, --approved <code>', 'custom code for the \'approved\' state', parseOptionAsInt, 1)
+  .option('-U, --unverified <code>', 'custom code for the \'unverified\' state', parseOptionAsInt, 2)
+  .option('-r, --rejected <code>', 'custom code for the \'rejected\' state', parseOptionAsInt, 3)
   .option('-P, --proxy <proxy string>', 'proxy string', validateProxyStr);
   
 program.parse(process.argv);
