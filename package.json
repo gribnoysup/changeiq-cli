@@ -1,12 +1,24 @@
 {
   "name": "changeiq-cli",
   "version": "0.1.0",
-  "description": "",
+  "description": "CLI for changing q.c. status of Nfield interviews",
+  "keywords": [
+    "nfield",
+    "quality control",
+    "nodejs"
+  ],
   "author": "Sergey Petushkov",
   "license": "MIT",
   "preferGlobal": true,
   "bin": {
     "changeiq": "index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/gribnoysup/changeiq-cli.git"
+  },
+  "engines": {
+    "node": "^4.x.x"
   },
   "dependencies": {
     "colors": "^1.1.2",
