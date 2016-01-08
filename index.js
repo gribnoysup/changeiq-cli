@@ -22,6 +22,8 @@ var codeLabels = [
 
 var codesMapping = [];
 
+var missingArgs = [];
+
 function parseOptionAsInt (opt) {
   return parseInt(opt, 10);
 }
@@ -29,7 +31,12 @@ function parseOptionAsInt (opt) {
 function exit (msg, code, warn) {
   if (code === 1) msg = colors.red(msg);
   if (warn === true) msg = colors.yellow(msg);
-  console.log('\n' + '  ' + msg + '\n');
+  if (warn === 'help') {
+    console.log('\n' + '  ' + msg);
+    program.help(); 
+  } else {
+    console.log('\n' + '  ' + msg + '\n');
+  }
   process.exit(code);
 }
 
@@ -72,11 +79,15 @@ program.parse(process.argv);
 
 codesMapping = [program.notChecked, program.approved, program.unverified, program.rejected];
 
-if (typeof program.nfieldDomain === 'undefined') exit('--nfield-domain missing', 1);
-if (typeof program.nfieldUsername === 'undefined') exit('--nfield-username missing', 1);
-if (typeof program.nfieldPassword === 'undefined') exit('--nfield-password missing', 1);
-if (typeof program.pathToFile === 'undefined') exit('--path-to-file missing', 1);
-if (typeof program.surveyId === 'undefined') exit('--survey-id missing', 1);
+if (typeof program.nfieldDomain === 'undefined') missingArgs.push('--nfield-domain');
+if (typeof program.nfieldUsername === 'undefined') missingArgs.push('--nfield-username');
+if (typeof program.nfieldPassword === 'undefined') missingArgs.push('--nfield-password');
+if (typeof program.pathToFile === 'undefined') missingArgs.push('--path-to-file');
+if (typeof program.surveyId === 'undefined') missingArgs.push('--survey-id');
+
+if (missingArgs.length > 0) {
+  exit('missing argument(s): ' + missingArgs.join(', '), 1, 'help');
+}
 
 if (typeof program.proxy !== 'undefined') {
   nfieldClient = nfieldClient.defaults({
@@ -132,11 +143,17 @@ fs.readFile(program.pathToFile, 'utf-8', function (err, file) {
               InterviewId : addLeadingZeroes(interview[0], 8),
               NewState : codesMapping.indexOf(interview[1])
             })
-            .then(function () {
-              var order = colors.green(addLeadingZeroes(++done, total.toString().length, ' ') + ' of ' + total);
-              var interviewNumber = colors.green(addLeadingZeroes(interview[0], 8));
-              var statusLabel = colors.green(codeLabels[ codesMapping.indexOf(interview[1]) ]);
-              console.log(`  ${order} changed status of interview ${interviewNumber} to ${statusLabel}`);
+            .then(function (result) {
+              var order = addLeadingZeroes(++done, total.toString().length, ' ') + ' of ' + total;
+              var interviewNumber = addLeadingZeroes(interview[0], 8);
+              var statusLabel = codeLabels[ codesMapping.indexOf(interview[1]) ];
+              
+              if (typeof statusLabel === 'undefined') {
+                console.log(`  ${colors.green(order)} changed state of interview ${colors.green(interviewNumber)} to ${colors.green(codeLabels[0])} ${colors.bgYellow('WARN')} ${colors.yellow(`state code ${interview[1]} is mapped to undefined`)}`); 
+              } else {
+                console.log(`  ${colors.green(order)} changed state of interview ${colors.green(interviewNumber)} to ${colors.green(statusLabel)}`);  
+              }
+              
             })
         );
       }
