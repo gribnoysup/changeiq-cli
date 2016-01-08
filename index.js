@@ -65,8 +65,8 @@ function addLeadingZeroes (str, max, symbol) {
 }
 
 program
-  .version('0.1.2')
-  .usage('-d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <code>] [-r <code>] [-U <code>] [-C <code>] [-P <proxy>]');
+  .version('0.1.3')
+  .usage('-d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <code>] [-r <code>] [-U <code>] [-C <code>] [-P <proxy>] [-c]');
   
 program
   .option('-d, --nfield-domain <domain>', 'nfield domain')
