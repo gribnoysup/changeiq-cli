@@ -65,7 +65,7 @@ function addLeadingZeroes (str, max, symbol) {
 }
 
 program
-  .version('0.1.1')
+  .version('0.1.2')
   .usage('-d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <code>] [-r <code>] [-U <code>] [-C <code>] [-P <proxy>]');
   
 program
