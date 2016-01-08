@@ -24,13 +24,18 @@ var codesMapping = [];
 
 var missingArgs = [];
 
+var labels = {
+  WARN : colors.bgYellow.black('WARN'),
+  ERR : colors.bgRed.white('ERR')
+};
+
 function parseOptionAsInt (opt) {
   return parseInt(opt, 10);
 }
 
 function exit (msg, code, warn) {
   if (code === 1) msg = colors.red(msg);
-  if (warn === true) msg = colors.yellow(msg);
+  if (warn === 'warn') msg = colors.yellow(msg);
   if (warn === 'help') {
     console.log('\n' + '  ' + msg);
     program.help(); 
@@ -148,10 +153,13 @@ fs.readFile(program.pathToFile, 'utf-8', function (err, file) {
               var interviewNumber = addLeadingZeroes(interview[0], 8);
               var statusLabel = codeLabels[ codesMapping.indexOf(interview[1]) ];
               
-              if (typeof statusLabel === 'undefined') {
-                console.log(`  ${colors.green(order)} changed state of interview ${colors.green(interviewNumber)} to ${colors.green(codeLabels[0])} ${colors.bgYellow('WARN')} ${colors.yellow(`state code ${interview[1]} is mapped to undefined`)}`); 
+              if (result[0].statusCode !== 200) {
+                console.log(`  ${colors.red(order)} ${labels.ERR} interview ${colors.cyan(interviewNumber)} wasn't processed: ${colors.cyan(result[0].statusCode + ' ' + result[0].statusMessage)}`);
+              } else if (typeof statusLabel === 'undefined') {
+                console.log(`  ${colors.yellow(order)} ${labels.WARN} state code ${colors.cyan(interview[1])} is mapped to ${colors.cyan('undefined')}`);
+                console.log(`  ${colors.green(order)} changed state of interview ${colors.cyan(interviewNumber)} to ${colors.cyan(codeLabels[0])}`); 
               } else {
-                console.log(`  ${colors.green(order)} changed state of interview ${colors.green(interviewNumber)} to ${colors.green(statusLabel)}`);  
+                console.log(`  ${colors.green(order)} changed state of interview ${colors.cyan(interviewNumber)} to ${colors.cyan(statusLabel)}`);  
               }
               
             })
@@ -171,7 +179,7 @@ fs.readFile(program.pathToFile, 'utf-8', function (err, file) {
     
   } else {
     
-    exit(`no interviews found to update, ensure that file ${colors.bold(path.basename(program.pathToFile))} is valid`, 0, true);
+    exit(`no interviews found to update, ensure that file ${colors.bold(path.basename(program.pathToFile))} is valid`, 0, 'warn');
     
   }
   
