@@ -78,7 +78,8 @@ program
   .option('-a, --approved <code>', 'custom code for the \'approved\' state', parseOptionAsInt, 1)
   .option('-U, --unverified <code>', 'custom code for the \'unverified\' state', parseOptionAsInt, 2)
   .option('-r, --rejected <code>', 'custom code for the \'rejected\' state', parseOptionAsInt, 3)
-  .option('-P, --proxy <proxy string>', 'proxy string', validateProxyStr);
+  .option('-P, --proxy <proxy string>', 'proxy string', validateProxyStr)
+  .option('-c, --change-unmapped', 'change state for unmapped codes to \'not checked\'');
   
 program.parse(process.argv);
 
@@ -141,12 +142,22 @@ fs.readFile(program.pathToFile, 'utf-8', function (err, file) {
       
       for (let i = 0; i < total; i++) {
         let interview = interviews[i];
+        let stateCode = codesMapping.indexOf(interview[1]);
+        
+        if (program.changeUnmapped !== true) {
+          if (stateCode === -1) {
+            console.log(`  ${colors.red(addLeadingZeroes(++done, total.toString().length, ' ') + ' of ' + total)} ${labels.ERR} skipping interview ${colors.cyan(addLeadingZeroes(interview[0], 8))}: state code ${colors.cyan(interview[1])} is mapped to ${colors.cyan('undefined')}`);
+            stateCode = 0;
+            continue;
+          }
+        } 
+        
         promises.push(
           connectedClient.InterviewQuality
             .update({
               SurveyId : program.surveyId,
               InterviewId : addLeadingZeroes(interview[0], 8),
-              NewState : codesMapping.indexOf(interview[1])
+              NewState : stateCode
             })
             .then(function (result) {
               var order = addLeadingZeroes(++done, total.toString().length, ' ') + ' of ' + total;
