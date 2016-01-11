@@ -67,8 +67,8 @@ In the logs you will see something like this:
 #### Limiting maximum request rate:
 
 By default `changeiq` collects all 'state update' requests to an array and calls 
-them with Promise.all, waiting for the answer, but sometimes it is not possible, 
-for example when you need to handle a lot of data and your proxy limit request 
+them with Promise.all, waiting for all of them to finish async at once, but sometimes 
+it is not possible: for example when you need to handle a lot of data and your proxy limit request 
 rate to some `count` in `time`. You can provide this behaviour with 
 `--max-requests [--timeout <ms>]` like this:
 
