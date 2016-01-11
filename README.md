@@ -20,15 +20,15 @@ Custom states codes can be provided with the following arguments:
     -U, --unverified <code>           custom code for the 'unverified' state
     -r, --rejected <code>             custom code for the 'rejected' state
 
-##### Install with npm:
+#### Install with npm:
 
     npm install changeiq-cli --global
 
-##### Use:
+#### Use:
 
-    changeiq -d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <code>] [-r <code>] [-U <code>] [-C <code>] [-c]
+    changeiq -d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <code>] [-r <code>] [-U <code>] [-C <code>] [-c] [-m [count]]
 
-##### Options:
+#### Options:
 
     -h, --help                        output usage information
     -V, --version                     output the version number
@@ -42,33 +42,74 @@ Custom states codes can be provided with the following arguments:
     -U, --unverified <code>           custom code for the 'unverified' state
     -r, --rejected <code>             custom code for the 'rejected' state
     -c, --change-unmapped             change state for unmapped codes to 'not checked'
+    -m, --max-requests [count]        limit maximum request rate to [count] at one time, defaults to 10 if argument provided with no value
+    -t, --timeout <ms>                sets a timeout in milliseconds between API request 'blocks' made with --max-requests
     
-##### Changing unmapped codes:
+#### Changing unmapped codes:
 
-By defaults all interviews from the provided tsv file with codes that does not correspond to default state codes or custom codes (if they are passed to the arguments) will be skipped by the CLI and log an error message:
+By defaults all interviews from the provided tsv file with codes that does not 
+correspond to default state codes or custom codes (if they are passed to the arguments) 
+will be skipped by the CLI and log an error message:
 
       starting to process 11 interviews...
     
       1 of 11 ERR skipping interview 00000004: state code 4 is mapped to undefined
       2 of 11 ERR skipping interview 00000005: state code 5 is mapped to undefined
       
-But because Nfield API allows to pass any value to the [NewState parameter of the request][1] and interprets it as 'not checked' state, you can allow this behaviour with `--change-unmapped` flag. With this flag all interviews with unmapped state codes will be changed to 'not checked' state. In the logs you will see something like this:
+But because Nfield API allows to pass any value to the [NewState parameter of the request][1] 
+and interprets it as 'not checked' state, you can allow this behaviour with `--change-unmapped` flag. 
+With this flag all interviews with unmapped state codes will be changed to 'not checked' state. 
+In the logs you will see something like this:
 
       11 of 11 WARN state code 123 is mapped to undefined
       11 of 11 changed state of interview 00000065 to not checked
+      
+#### Limiting maximum request rate:
 
-##### Example:
+By default `changeiq` collects all 'state update' requests to an array and calls 
+them with Promise.all, waiting for the answer, but sometimes it is not possible, 
+for example when you need to handle a lot of data and your proxy limit request 
+rate to some `count` in `time`. You can provide this behaviour with 
+`--max-requests [--timeout <ms>]` like this:
 
-First we need to create a valid file with an interviews list to pass to the CLI. Let's name it `interviews.txt` and fill it with some data:
+    changeiq -d DMN -u Username -p p455w0rD -f interviews.txt -s real-survey-id -m 1000 -t 60000
+    
+This will limit request rate of the CLI to 1000 requests in one minute (60000ms).
+
+For example, here I run CLI, limiting requests to 1 in 30 seconds:
+
+    changeiq -d DMN -u Username -p p455w0rD -f interviews.txt -s real-survey-id -m 1 -t 30000
+    
+and get an expected result of 152 seconds, taking in the account that first request 
+fires immidiately and ~2 secs goes to network delays
+    
+      starting to process 6 interviews...
+    
+      1 of 6 changed state of interview 00000001 to rejected
+      2 of 6 changed state of interview 00000006 to rejected
+      3 of 6 changed state of interview 00000007 to approved
+      4 of 6 changed state of interview 00000008 to rejected
+      5 of 6 changed state of interview 00000009 to rejected
+      6 of 6 changed state of interview 00000010 to approved
+    
+      finished in 152.86s
+
+#### Example:
+
+First we need to create a valid file with an interviews list to pass to the CLI. 
+Let's name it `interviews.txt` and fill it with some data:
 
     65	3
     86	3
     98	1
     123	1
     
-The first column is the INTNR; the second is the new state code (default codes are used for this example); columns are tab separated; empty or NaN cells are ignored by the CLI.
+The first column is the INTNR; the second is the new state code (default codes 
+are used for this example); columns are tab separated; empty or NaN cells are 
+ignored by the CLI.
 
-Then we run the `changeiq` command replacing `-d`, `-u,`, `-p`, `-f`, `-s` with valid data:
+Then we run the `changeiq` command replacing `-d`, `-u,`, `-p`, `-f`, `-s` with 
+valid data:
 
     changeiq -d DMN -u Username -p p455w0rD -f interviews.txt -s real-survey-id
     
@@ -84,7 +125,9 @@ If all goes well, something like this will appear in your terminal:
     
       finished in 0.9s
     
-If the interviews list is generated with some fieldwork software and state codes differ from those that are used in Nfield, you can provide your custom codes in arguments without changing them in the file.
+If the interviews list is generated with some fieldwork software and state codes 
+differ from those that are used in Nfield, you can provide your custom codes in 
+arguments without changing them in the file.
 
 For example, if our `interviews.txt` looked something like this from the start:
 
@@ -93,7 +136,8 @@ For example, if our `interviews.txt` looked something like this from the start:
     98	18
     123	18
     
-where 19 is rejected and 18 is approved, we could run `changeiq` with the following additional `-a` and `-r` arguments:
+where 19 is rejected and 18 is approved, we could run `changeiq` with the following 
+additional `-a` and `-r` arguments:
 
     changeiq -d DMN -u Username -p p455w0rD -f interviews.txt -s real-survey-id -a 18 -r 19
 
