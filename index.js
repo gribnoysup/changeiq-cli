@@ -6,7 +6,6 @@ var startTime, endTime;
 
 var program = require('commander');
 var colors = require('colors/safe');
-var validUrl = require('valid-url');
 
 var nfieldClient = require('nfield-api').NfieldClient;
 
@@ -30,7 +29,9 @@ var labels = {
 };
 
 function parseOptionAsInt (opt) {
-  return parseInt(opt, 10);
+  var absInt = parseInt(opt, 10);
+  if (isNaN(absInt)) exit(`\'${opt}\' is not a number`, 1);
+  return absInt;
 }
 
 function exit (msg, code, warn) {
@@ -43,12 +44,6 @@ function exit (msg, code, warn) {
     console.log('\n' + '  ' + msg + '\n');
   }
   process.exit(code);
-}
-
-function validateProxyStr (str) {
-  if (typeof validUrl.isUri(str) === 'undefined') {
-    exit(`--proxy value \'${str}\' is not a valid URL`, 1);
-  }
 }
 
 function addLeadingZeroes (str, max, symbol) {
@@ -65,7 +60,7 @@ function addLeadingZeroes (str, max, symbol) {
 }
 
 program
-  .version('0.1.3')
+  .version('0.1.4-0')
   .usage('-d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <code>] [-r <code>] [-U <code>] [-C <code>] [-c]');
   
 program
@@ -78,7 +73,9 @@ program
   .option('-a, --approved <code>', 'custom code for the \'approved\' state', parseOptionAsInt, 1)
   .option('-U, --unverified <code>', 'custom code for the \'unverified\' state', parseOptionAsInt, 2)
   .option('-r, --rejected <code>', 'custom code for the \'rejected\' state', parseOptionAsInt, 3)
-  .option('-c, --change-unmapped', 'change state for unmapped codes to \'not checked\'');
+  .option('-c, --change-unmapped', 'change state for unmapped codes to \'not checked\'')
+  .option('-m, --max-requests [count]', 'limit maximun async request count to [count], defaults to 10 if argument provided with no value', parseOptionAsInt)
+  .option('-t, --timeout <ms>', 'sets a timeout between API request \'blocks\' made with --max-requests', parseOptionAsInt);
   
 program.parse(process.argv);
 
@@ -93,6 +90,14 @@ if (typeof program.surveyId === 'undefined') missingArgs.push('--survey-id');
 if (missingArgs.length > 0) {
   exit('missing argument(s): ' + missingArgs.join(', '), 1, 'help');
 }
+
+if (program.maxRequests === true) program.maxRequests = 10;
+
+if (typeof program.maxRequests === 'undefined' && typeof program.timeout !== 'undefined') {
+  console.log(`\n  ${labels.WARN} --timeout applied only with --max-requests, argument will be ignored`);
+}
+
+if (typeof program.timeout === 'undefined') program.timeout = 0;
 
 startTime = process.hrtime();
 
@@ -129,48 +134,95 @@ fs.readFile(program.pathToFile, 'utf-8', function (err, file) {
       });
     })
     .then(function (connectedClient) {
-      let promises = [];
-      
+
       console.log(`\n  starting to process ${total} interviews...\n`);
       
       for (let i = 0; i < total; i++) {
         let interview = interviews[i];
         let stateCode = codesMapping.indexOf(interview[1]);
         
-        if (program.changeUnmapped !== true) {
-          if (stateCode === -1) {
-            console.log(`  ${colors.red(addLeadingZeroes(++done, total.toString().length, ' ') + ' of ' + total)} ${labels.ERR} skipping interview ${colors.cyan(addLeadingZeroes(interview[0], 8))}: state code ${colors.cyan(interview[1])} is mapped to ${colors.cyan('undefined')}`);
-            stateCode = 0;
-            continue;
-          }
-        } 
+        if (stateCode === -1 && program.changeUnmapped !== true) {
+          console.log(`  ${colors.red(addLeadingZeroes(++done, total.toString().length, ' ') + ' of ' + total)} ${labels.ERR} skipping interview ${colors.cyan(addLeadingZeroes(interview[0], 8))}: state code ${colors.cyan(interview[1])} is mapped to ${colors.cyan('undefined')}`);
+          interviews[i] = null;
+          continue;
+        }
         
-        promises.push(
-          connectedClient.InterviewQuality
-            .update({
-              SurveyId : program.surveyId,
-              InterviewId : addLeadingZeroes(interview[0], 8),
-              NewState : stateCode
-            })
-            .then(function (result) {
-              var order = addLeadingZeroes(++done, total.toString().length, ' ') + ' of ' + total;
-              var interviewNumber = addLeadingZeroes(interview[0], 8);
-              var statusLabel = codeLabels[ codesMapping.indexOf(interview[1]) ];
-              
-              if (result[0].statusCode !== 200) {
-                console.log(`  ${colors.red(order)} ${labels.ERR} interview ${colors.cyan(interviewNumber)} wasn't processed: ${colors.cyan(result[0].statusCode + ' ' + result[0].statusMessage)}`);
-              } else if (typeof statusLabel === 'undefined') {
-                console.log(`  ${colors.yellow(order)} ${labels.WARN} state code ${colors.cyan(interview[1])} is mapped to ${colors.cyan('undefined')}`);
-                console.log(`  ${colors.green(order)} changed state of interview ${colors.cyan(interviewNumber)} to ${colors.cyan(codeLabels[0])}`); 
-              } else {
-                console.log(`  ${colors.green(order)} changed state of interview ${colors.cyan(interviewNumber)} to ${colors.cyan(statusLabel)}`);  
-              }
-              
-            })
-        );
       }
       
-      return Promise.all(promises);
+      return connectedClient;
+    })
+    .then(function (connectedClient) {
+      
+      var all = interviews.slice(0);
+      var spliced = [];
+      var promises = [];
+      var promise = Promise.resolve();
+      
+      function changeStatus (client, param) {
+        
+        if (param === null) return;
+        
+        return client.InterviewQuality
+          .update({
+            SurveyId : program.surveyId,
+            InterviewId : addLeadingZeroes(param[0], 8),
+            NewState : codesMapping.indexOf(param[1]) == -1 ? 0 : codesMapping.indexOf(param[1])
+          })
+          .then(function (result) {
+            var order = addLeadingZeroes(++done, total.toString().length, ' ') + ' of ' + total;
+            var interviewNumber = addLeadingZeroes(param[0], 8);
+            var statusLabel = codeLabels[ codesMapping.indexOf(param[1]) ];
+            
+            if (result[0].statusCode !== 200) {
+              console.log(`  ${colors.red(order)} ${labels.ERR} interview ${colors.cyan(interviewNumber)} wasn't processed: ${colors.cyan(result[0].statusCode + ' ' + result[0].statusMessage)}`);
+            } else if (typeof statusLabel === 'undefined') {
+              console.log(`  ${colors.yellow(order)} ${labels.WARN} state code ${colors.cyan(param[1])} is mapped to ${colors.cyan('undefined')}`);
+              console.log(`  ${colors.green(order)} changed state of interview ${colors.cyan(interviewNumber)} to ${colors.cyan(codeLabels[0])}`); 
+            } else {
+              console.log(`  ${colors.green(order)} changed state of interview ${colors.cyan(interviewNumber)} to ${colors.cyan(statusLabel)}`);  
+            }
+          });
+      }
+      
+      function generateRequests (array, i) {
+        var resolvedPromise = new Promise(function (resolve, reject) {
+          setTimeout(function () {
+            var promises = [];
+            while (array.length > 0) {
+              promises.push(changeStatus(connectedClient, array.shift()));
+            }
+            resolve(Promise.all(promises));
+          }, i == 0 ? 0 : program.timeout);
+        });
+        
+        return resolvedPromise;
+      }
+      
+      if (typeof program.maxRequests !== 'undefined' && all.length > program.maxRequests) {
+        
+        while (all.length > 0) {
+          spliced.push(all.splice(0, program.maxRequests));
+        }
+        
+        for (let i = 0; i < spliced.length; i++) {
+          promise = promise.then(function () {
+            return generateRequests(spliced[i], i);
+          });
+        }
+        
+        return promise;
+        
+      } else {
+        
+        while (all.length > 0) {
+          promises.push(
+            changeStatus(connectedClient, all.shift())
+          );
+        }
+        
+        return Promise.all(promises);
+      }
+      
     })
     .then(function () {
       endTime = process.hrtime(startTime);
