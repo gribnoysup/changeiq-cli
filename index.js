@@ -66,7 +66,7 @@ function addLeadingZeroes (str, max, symbol) {
 
 program
   .version('0.1.3')
-  .usage('-d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <code>] [-r <code>] [-U <code>] [-C <code>] [-P <proxy>] [-c]');
+  .usage('-d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <code>] [-r <code>] [-U <code>] [-C <code>] [-c]');
   
 program
   .option('-d, --nfield-domain <domain>', 'nfield domain')
@@ -78,7 +78,6 @@ program
   .option('-a, --approved <code>', 'custom code for the \'approved\' state', parseOptionAsInt, 1)
   .option('-U, --unverified <code>', 'custom code for the \'unverified\' state', parseOptionAsInt, 2)
   .option('-r, --rejected <code>', 'custom code for the \'rejected\' state', parseOptionAsInt, 3)
-  .option('-P, --proxy <proxy string>', 'proxy string', validateProxyStr)
   .option('-c, --change-unmapped', 'change state for unmapped codes to \'not checked\'');
   
 program.parse(process.argv);
@@ -93,12 +92,6 @@ if (typeof program.surveyId === 'undefined') missingArgs.push('--survey-id');
 
 if (missingArgs.length > 0) {
   exit('missing argument(s): ' + missingArgs.join(', '), 1, 'help');
-}
-
-if (typeof program.proxy !== 'undefined') {
-  nfieldClient = nfieldClient.defaults({
-    proxy : program.proxy
-  });
 }
 
 startTime = process.hrtime();

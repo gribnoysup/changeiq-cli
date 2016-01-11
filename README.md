@@ -26,7 +26,7 @@ Custom states codes can be provided with the following arguments:
 
 ##### Use:
 
-    changeiq -d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <code>] [-r <code>] [-U <code>] [-C <code>] [-P <proxy>] [-c]
+    changeiq -d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <code>] [-r <code>] [-U <code>] [-C <code>] [-c]
 
 ##### Options:
 
@@ -41,7 +41,6 @@ Custom states codes can be provided with the following arguments:
     -a, --approved <code>             custom code for the 'approved' state
     -U, --unverified <code>           custom code for the 'unverified' state
     -r, --rejected <code>             custom code for the 'rejected' state
-    -P, --proxy <proxy string>        proxy string
     -c, --change-unmapped             change state for unmapped codes to 'not checked'
     
 ##### Changing unmapped codes:
