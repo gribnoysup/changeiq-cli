@@ -81,7 +81,7 @@ function getStateCode (value) {
 }
 
 program
-  .version('0.2.1')
+  .version('0.3.0')
   .usage('-d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <list>] [-r <list>] [-U <list>] [-C <list>] [-c] [-m [count]] [-t <ms>]');
   
 program
