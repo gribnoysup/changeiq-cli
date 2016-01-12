@@ -29,9 +29,17 @@ var labels = {
 };
 
 function parseOptionAsInt (opt) {
-  var absInt = parseInt(opt, 10);
-  if (isNaN(absInt)) exit(`\'${opt}\' is not a number`, 1);
-  return absInt;
+  var int = parseInt(opt, 10);
+  if (isNaN(int)) exit(`\'${opt}\' is not a number`, 1);
+  return int;
+}
+
+function parseOptionAsArray (value) {
+  var unique = [];
+  value.split(',').map(e => e.trim()).forEach(e => {
+    if (unique.indexOf(e) === -1) unique.push(e);
+  });
+  return unique;
 }
 
 function exit (msg, code, warn) {
@@ -59,9 +67,22 @@ function addLeadingZeroes (str, max, symbol) {
   return string;
 }
 
+function getStateCode (value) {
+  var code = -1;
+  
+  for (var i = 0; i < codesMapping.length; i++) {
+    if (codesMapping[i].indexOf(value) !== -1) {
+      code = i;
+      break;
+    }
+  }
+  
+  return code;
+}
+
 program
   .version('0.2.1')
-  .usage('-d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <code>] [-r <code>] [-U <code>] [-C <code>] [-c] [-m [count]] [-t <ms>]');
+  .usage('-d <domain> -u <username> -p <password> -f <path> -s <survey id> [-a <list>] [-r <list>] [-U <list>] [-C <list>] [-c] [-m [count]] [-t <ms>]');
   
 program
   .option('-d, --nfield-domain <domain>', 'nfield domain')
@@ -69,13 +90,14 @@ program
   .option('-p, --nfield-password <password>', 'nfield password')
   .option('-f, --path-to-file <path>', 'path to tsv file with two colums: INTNR and new state code')
   .option('-s, --survey-id <survey id>', 'nfield Survey ID')
-  .option('-C, --not-checked <code>', 'custom code for the \'not checked\' state', parseOptionAsInt, 0)
-  .option('-a, --approved <code>', 'custom code for the \'approved\' state', parseOptionAsInt, 1)
-  .option('-U, --unverified <code>', 'custom code for the \'unverified\' state', parseOptionAsInt, 2)
-  .option('-r, --rejected <code>', 'custom code for the \'rejected\' state', parseOptionAsInt, 3)
-  .option('-c, --change-unmapped', 'change state for unmapped codes to \'not checked\'')
   .option('-m, --max-requests [count]', 'limit maximun async request count to [count], defaults to 10 if argument provided with no value', parseOptionAsInt)
-  .option('-t, --timeout <ms>', 'sets a timeout between API request \'blocks\' made with --max-requests', parseOptionAsInt);
+  .option('-t, --timeout <ms>', 'sets a timeout between API request \'blocks\' made with --max-requests', parseOptionAsInt)
+  .option('-c, --change-unmapped', 'change state for unmapped codes to \'not checked\'')
+  
+  .option('-C, --not-checked <list>', 'comma-separated list of custom mappings for the \'not checked\' state', parseOptionAsArray, ['0'])
+  .option('-a, --approved <list>', 'comma-separated list of custom mappings for the \'approved\' state', parseOptionAsArray, ['1'])
+  .option('-U, --unverified <list>', 'comma-separated list of custom mappings for the \'unverified\' state', parseOptionAsArray, ['2'])
+  .option('-r, --rejected <list>', 'comma-separated list of custom mappings for the \'rejected\' state', parseOptionAsArray, ['3']);
   
 program.parse(process.argv);
 
@@ -105,12 +127,12 @@ fs.readFile(program.pathToFile, 'utf-8', function (err, file) {
   
   if (err) return exit(err.message, 1);
   
-  var interviews = file.replace(/\r?\n/, '\n').split('\n').map(e => e.split('\t').map(function (n) { return parseInt(n.trim(), 10) } ));
+  var interviews = file.replace(/\r?\n/, '\n').split('\n').map(e => e.split('\t').map(function (n) { return n.trim() } ));
   var total = 0;
   var done = 0;
   
   interviews = interviews.filter(function (e) {
-    return e && e.length >= 2 && !isNaN(e[0]) && !isNaN(e[1]);
+    return e && e.length >= 2 && !isNaN(e[0]);
   });
   
   total = interviews.length;
@@ -139,7 +161,7 @@ fs.readFile(program.pathToFile, 'utf-8', function (err, file) {
       
       for (let i = 0; i < total; i++) {
         let interview = interviews[i];
-        let stateCode = codesMapping.indexOf(interview[1]);
+        let stateCode = getStateCode(interview[1]);
         
         if (stateCode === -1 && program.changeUnmapped !== true) {
           console.log(`  ${colors.red(addLeadingZeroes(++done, total.toString().length, ' ') + ' of ' + total)} ${labels.ERR} skipping interview ${colors.cyan(addLeadingZeroes(interview[0], 8))}: state code ${colors.cyan(interview[1])} is mapped to ${colors.cyan('undefined')}`);
@@ -162,16 +184,18 @@ fs.readFile(program.pathToFile, 'utf-8', function (err, file) {
         
         if (param === null) return;
         
+        var stateCode = getStateCode(param[1]);
+        
         return client.InterviewQuality
           .update({
             SurveyId : program.surveyId,
             InterviewId : addLeadingZeroes(param[0], 8),
-            NewState : codesMapping.indexOf(param[1]) == -1 ? 0 : codesMapping.indexOf(param[1])
+            NewState : stateCode == -1 ? 0 : stateCode
           })
           .then(function (result) {
             var order = addLeadingZeroes(++done, total.toString().length, ' ') + ' of ' + total;
             var interviewNumber = addLeadingZeroes(param[0], 8);
-            var statusLabel = codeLabels[ codesMapping.indexOf(param[1]) ];
+            var statusLabel = codeLabels[ stateCode ];
             
             if (result[0].statusCode !== 200) {
               console.log(`  ${colors.red(order)} ${labels.ERR} interview ${colors.cyan(interviewNumber)} wasn't processed: ${colors.cyan(result[0].statusCode + ' ' + result[0].statusMessage)}`);
