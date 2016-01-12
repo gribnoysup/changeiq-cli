@@ -90,14 +90,14 @@ program
   .option('-p, --nfield-password <password>', 'nfield password')
   .option('-f, --path-to-file <path>', 'path to tsv file with two colums: INTNR and new state code')
   .option('-s, --survey-id <survey id>', 'nfield Survey ID')
-  .option('-m, --max-requests [count]', 'limit maximun async request count to [count], defaults to 10 if argument provided with no value', parseOptionAsInt)
+  .option('-m, --max-requests [count]', 'serializes requests to API to groups of [count], defaults to 10 if argument provided with no value', parseOptionAsInt)
   .option('-t, --timeout <ms>', 'sets a timeout between API request \'blocks\' made with --max-requests', parseOptionAsInt)
   .option('-c, --change-unmapped', 'change state for unmapped codes to \'not checked\'')
   
-  .option('-C, --not-checked <list>', 'comma-separated list of custom mappings for the \'not checked\' state', parseOptionAsArray, ['0'])
-  .option('-a, --approved <list>', 'comma-separated list of custom mappings for the \'approved\' state', parseOptionAsArray, ['1'])
-  .option('-U, --unverified <list>', 'comma-separated list of custom mappings for the \'unverified\' state', parseOptionAsArray, ['2'])
-  .option('-r, --rejected <list>', 'comma-separated list of custom mappings for the \'rejected\' state', parseOptionAsArray, ['3']);
+  .option('-C, --not-checked <list>', 'comma-separated list of custom mappings for the \'not checked\' state', parseOptionAsArray, ['0', 'Not checked'])
+  .option('-a, --approved <list>', 'comma-separated list of custom mappings for the \'approved\' state', parseOptionAsArray, ['1', 'Approved'])
+  .option('-U, --unverified <list>', 'comma-separated list of custom mappings for the \'unverified\' state', parseOptionAsArray, ['2', 'Unverified'])
+  .option('-r, --rejected <list>', 'comma-separated list of custom mappings for the \'rejected\' state', parseOptionAsArray, ['3', 'Rejected']);
   
 program.parse(process.argv);
 
